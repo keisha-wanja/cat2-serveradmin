@@ -1,50 +1,58 @@
 <?php
+session_start();
 require 'config.php';
-if (!isset($_SESSION['user_id'])) { header('Location: login.php'); exit; }
+
 $msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name    = trim($_POST['name'] ?? '');
-    $email   = trim($_POST['email'] ?? '');
+    $name = trim($_POST['name'] ?? '');
     $message = trim($_POST['message'] ?? '');
     if ($name !== '' && $message !== '') {
-        $stmt = $conn->prepare('INSERT INTO feedback (name, email, message) VALUES (?,?,?)');
-        $stmt->bind_param('sss', $name, $email, $message);
-        $stmt->execute();
-        $msg = 'Feedback saved ✅';
+        $stmt = $conn->prepare('INSERT INTO feedback (name, message) VALUES (?, ?)');
+        $stmt->bind_param('ss', $name, $message);
+        $msg = $stmt->execute() ? 'Thank you, your feedback was saved.' : 'Error: ' . $conn->error;
     } else {
-        $msg = 'Name and message are required.';
+        $msg = 'Please fill in both fields.';
     }
 }
-$rows = $conn->query('SELECT id, name, email, message, created_at FROM feedback ORDER BY id DESC');
+$rows = $conn->query('SELECT id, name, message, submitted_at FROM feedback ORDER BY id DESC');
 ?>
 <!DOCTYPE html>
-<html><head><title>Feedback</title>
-<style>body{font-family:Arial;max-width:700px;margin:40px auto}
-input,textarea{width:100%;padding:9px;margin:6px 0;box-sizing:border-box}
-button{padding:10px 20px;background:#2c5282;color:#fff;border:0;border-radius:6px}
-table{border-collapse:collapse;width:100%;margin-top:20px}
-td,th{border:1px solid #ccc;padding:8px;text-align:left}th{background:#edf2f7}</style>
-</head><body>
-<h2>Feedback Form</h2>
-<p><?php echo $msg; ?></p>
-<form method="POST" action="feedback.php">
-  <input name="name" placeholder="Your name" required>
-  <input name="email" type="email" placeholder="Email">
-  <textarea name="message" rows="4" placeholder="Your feedback" required></textarea>
-  <button type="submit">Submit</button>
-</form>
-<h3>Saved feedback (retrieved from the database)</h3>
-<table>
-<tr><th>ID</th><th>Name</th><th>Email</th><th>Message</th><th>Time</th></tr>
-<?php while ($r = $rows->fetch_assoc()): ?>
-<tr>
-  <td><?php echo $r['id']; ?></td>
-  <td><?php echo htmlspecialchars($r['name']); ?></td>
-  <td><?php echo htmlspecialchars($r['email']); ?></td>
-  <td><?php echo htmlspecialchars($r['message']); ?></td>
-  <td><?php echo $r['created_at']; ?></td>
-</tr>
-<?php endwhile; ?>
-</table>
-<p><a href="dashboard.php">Back</a></p>
-</body></html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Feedback</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f2f4f8; padding: 40px; }
+    .box { background: #fff; padding: 24px; border-radius: 8px; max-width: 600px; margin: auto; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+    input, textarea { width: 100%; padding: 10px; margin: 6px 0; box-sizing: border-box; }
+    button { padding: 10px 20px; background: #2b6cb0; color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>Feedback</h2>
+    <form method="POST">
+      <input name="name" placeholder="Your name" required>
+      <textarea name="message" placeholder="Your message" rows="4" required></textarea>
+      <button type="submit">Send</button>
+    </form>
+    <p><strong><?= htmlspecialchars($msg) ?></strong></p>
+    <h3>Submitted feedback</h3>
+    <table>
+      <tr><th>ID</th><th>Name</th><th>Message</th><th>Date</th></tr>
+      <?php while ($r = $rows->fetch_assoc()): ?>
+        <tr>
+          <td><?= (int)$r['id'] ?></td>
+          <td><?= htmlspecialchars($r['name']) ?></td>
+          <td><?= htmlspecialchars($r['message']) ?></td>
+          <td><?= htmlspecialchars($r['submitted_at']) ?></td>
+        </tr>
+      <?php endwhile; ?>
+    </table>
+    <p><a href="dashboard.php">Back to dashboard</a></p>
+  </div>
+</body>
+</html>
