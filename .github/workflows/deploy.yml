@@ -1,0 +1,18 @@
+   name: Deploy to Azure Linux server
+   on:
+     push:
+       branches: [ main ]
+   jobs:
+     deploy:
+       runs-on: ubuntu-latest
+       steps:
+         - name: Pull latest code on the server over SSH
+           uses: appleboy/ssh-action@v1.0.3
+           with:
+             host: ${{ secrets.VM_HOST }}
+             username: ${{ secrets.VM_USER }}
+             key: ${{ secrets.VM_SSH_KEY }}
+             script: |
+               cd /var/www/html/cat2
+               git pull origin main
+               echo "Deployed at $(date)" >> /home/azureuser/deploy.log
